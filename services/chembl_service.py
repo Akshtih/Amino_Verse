@@ -38,20 +38,44 @@ def get_drug_associations(protein_name):
             return {"error": "Could not find ChEMBL target ID"}
         
         # Get drugs/compounds that interact with this target
-        drugs_url = f"https://www.ebi.ac.uk/chembl/api/data/activity?target_chembl_id={target_chembl_id}&limit=10&format=json"
+        drugs_url = f"https://www.ebi.ac.uk/chembl/api/data/activity?target_chembl_id={target_chembl_id}&limit=30&format=json"
         drugs_response = requests.get(drugs_url)
         drugs_response.raise_for_status()
         drugs_data = drugs_response.json()
         
         drug_list = []
         for activity in drugs_data.get("activities", []):
+            # Only include entries that have the essential data
+            if not activity.get("molecule_chembl_id"):
+                continue
+                
             drug = {
-                "molecule_chembl_id": activity.get("molecule_chembl_id", ""),
-                "molecule_name": activity.get("molecule_name", "Unknown compound"),
-                "activity_type": activity.get("standard_type", ""),
-                "activity_value": f"{activity.get('standard_value', 'N/A')} {activity.get('standard_units', '')}",
+                "molecule_chembl_id": activity.get("molecule_chembl_id"),
             }
-            drug_list.append(drug)
+            
+            # Only add fields if they have actual data
+            if activity.get("molecule_name"):
+                drug["molecule_name"] = activity["molecule_name"]
+                
+            if activity.get("standard_type"):
+                drug["activity_type"] = activity["standard_type"]
+                
+            if activity.get("standard_value") is not None:
+                value_str = f"{activity['standard_value']}"
+                if activity.get("standard_units"):
+                    value_str += f" {activity['standard_units']}"
+                drug["activity_value"] = value_str
+                
+            # Include additional informative fields when available
+            if activity.get("target_organism"):
+                drug["target_organism"] = activity["target_organism"]
+                
+            if activity.get("assay_description"):
+                drug["assay_description"] = activity["assay_description"]
+                
+            # Only append if we have more than just the ID
+            if len(drug) > 1:
+                drug_list.append(drug)
         
         return {
             "target_chembl_id": target_chembl_id,
