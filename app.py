@@ -17,7 +17,7 @@ def create_app():
     
     @app.route('/')
     def health_check():
-        return {"status": "healthy", "message": "Biological Insights API is running"}
+        return {"status": "healthy", "message": "AminoVerse API is running"}
     
     return app
 
